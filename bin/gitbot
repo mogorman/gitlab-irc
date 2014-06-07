@@ -5,10 +5,11 @@ require "cinch"
 require "sinatra"
 require "yaml"
 require "json"
+require 'net/http'
 
 config_file = ARGV.shift || "config.yml"
 if not File.exists? config_file
-  puts "Can't find config file #{config_file}"
+  puts "Cant find config file #{config_file}"
   puts "Either create it or specify another config file with: #{File.basename $0} [filename]"
   exit
 end
@@ -85,3 +86,19 @@ post "/github" do
 
   push.inspect
 end
+
+
+post "/commit" do
+    json = JSON.parse(request.env["rack.input"].read)
+    json["commits"][0..2].each do |commit|
+        commit_message = commit["message"].gsub(/\n/," ")
+	repo= json["repository"]["email"]
+	rldn ="http://rldn.net/api/#{commit['url']}"
+	result = Net::HTTP.get_response(URI.parse(rldn))
+	my_url = result.body.split(' ')[1]
+	commit_link= "View Commit: #{my_url}"
+        say  repo, "[#{json["repository"]["name"].capitalize}] #{commit["author"]["name"]} | #{commit_message}"
+        say repo, commit_link
+    end
+end
+
